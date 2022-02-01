@@ -11,12 +11,18 @@ class GameScene(Entity):
     def __init__(self, level, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.right_door = None
+        self.left_door = None
         self.cameraBtn = None
         self.cameras = None
         self.text3 = None
         self.text2 = None
         self.energy_state = False
-        self.text = None
+
+        class text:
+            text = None
+
+        self.text = text
         self.door = None
         self.lol = None
         self.flashlight = None
@@ -51,10 +57,27 @@ class GameScene(Entity):
 
         self.load()
 
-    def load(self):
-        self.background = Animation('game.gif', parent=camera.ui)
-        self.background.scale /= 6
-        self.background.position = (0, 0)
+    def load(self, off=False):
+        if not off:
+            self.background = Animation('assets/images/game.gif', parent=camera.ui)
+            self.background.scale /= 6
+            self.background.position = (0, 0)
+
+            #self.left_door = Animation('assets/images/open.gif', parent=self.background,
+            #                           position=(-0.5, 0),
+            #                           loop=False,
+            #                           color=rgb(0, 0, 0)
+            #                           )
+            #self.left_door.scale /= 6
+
+            #self.right_door = Animation('assets/images/open.gif', parent=self.background,
+            #                            position=Vec2(0.5, 0),
+             #                           loop=False,
+            #                            color=rgb(0, 0, 0)
+             #                           )  # 123
+
+            #self.right_door.scale /= 6
+
         self.lol = self.background.scale[2] / 2
 
         self.text = Text(f'{self.time_to_str()}', scale=2,
@@ -74,12 +97,14 @@ class GameScene(Entity):
                                 scale=(0.7, 0.1, 0.5),
                                 text='Открыть камеры',
                                 on_click=lambda: [playsound('click.mp3'), self.cameras.deopen() if self.cameras.state
-                                                  else self.cameras.open()])
+                                else self.cameras.open()])
 
-    def unload(self):
+    def unload(self, off=False):
         self.cameras.unload()
-        for i in [self.background, self.text, self.text2, self.text3, self.cameras, self.cameraBtn]:
+        for i in [self.text, self.text2, self.text3, self.cameras, self.cameraBtn]:
             destroy(i)
+        if not off:
+            destroy(self.background)
 
     def time_to_str(self):
         minutes = int(self.timer / 60)
@@ -125,6 +150,17 @@ class GameScene(Entity):
                           f'left: {"да" if self.state["left"] else "нет"}\n' \
                           f'right: {"да" if self.state["right"] else "нет"}'
 
+        last_pos = (self.background.x, self.background.y)
+
+        destroy(self.background)
+
+        self.background = Animation('assets/images/off.gif', parent=camera.ui, loop=False, fps=60)
+        self.background.scale /= 6
+        self.background.position = last_pos
+
+        self.unload(True)
+        self.load(True)
+
     def update(self):
         if self.loser:
             return
@@ -143,7 +179,7 @@ class GameScene(Entity):
                 self.energy -= time.dt
             if self.state['right']:
                 self.energy -= time.dt
-            self.energy -= 0.000099
+            self.energy -= 0.00001
 
         elif self.energy <= 0 and self.energy_state is False:
             self.off_light()
@@ -176,6 +212,22 @@ class GameScene(Entity):
                           f'left: {"да" if self.state["left"] else "нет"}\n' \
                           f'right: {"да" if self.state["right"] else "нет"}'
 
+        #if self.state[x]:
+            #a = 'close.gif'
+        #else:
+            #a = 'open.gif'
+
+        #destroy(getattr(self, f'{x}_door'))
+
+        #obj = Animation(f'assets/images/{a}', parent=self.background,
+        #                position=(-0.5 if x == 'left' else 0.5, 0),
+        #                loop=False,
+        #                fps=60
+        #                )
+        #obj.scale /= 6
+
+        #setattr(self, f'{x}_door', obj)
+
     def check_animatronics(self):
         for animatronic in self.animatronics:
             if self.animatronics[animatronic][2] is False:
@@ -184,7 +236,7 @@ class GameScene(Entity):
                     animatronic][1] is False:
                     playsound(animatronic + '.mp3')
                     self.animatronics[animatronic][1] = True
-                if self.animatronics[animatronic][1] and self.animatronics[animatronic][0] >= self.animatronics[\
+                if self.animatronics[animatronic][1] and self.animatronics[animatronic][0] >= self.animatronics[ \
                         animatronic][5] + 50:
                     if self.state[self.animatronics[animatronic][3]]:
                         self.animatronics[animatronic][0] = 0
@@ -239,6 +291,7 @@ class CameraMenu(Entity):
         def a():
             playsound('click.mp3')
             self.change(i)
+
         return a
 
     def load(self):
@@ -272,10 +325,11 @@ class CameraMenu(Entity):
         destroy(self.player.cameraBtn)
 
         self.player.cameraBtn = Button(position=Vec2(0, -0.4),
-                                scale=(0.7, 0.1, 0.5),
-                                text='Закрыть камеры',
-                                on_click=lambda: [playsound('click.mp3'), self.player.cameras.deopen() if self.player.cameras.state
-                                else self.player.cameras.open()])
+                                       scale=(0.7, 0.1, 0.5),
+                                       text='Закрыть камеры',
+                                       on_click=lambda: [playsound('click.mp3'),
+                                                         self.player.cameras.deopen() if self.player.cameras.state
+                                                         else self.player.cameras.open()])
 
     def update(self):
         if self.state:
@@ -288,6 +342,8 @@ class CameraMenu(Entity):
             elif self.bonus_sec >= 6 and self.bonus_dest is False:
                 destroy(self.bonus_vid)
                 self.bonus_dest = True
+            if self.player.energy <= 0.5:
+                self.deopen()
 
     def unload(self):
         [destroy(i) for i in self.buttons]
@@ -322,16 +378,16 @@ class CameraMenu(Entity):
             pass
 
         self.index = index
-        last = self.buttons[index-1]
+        last = self.buttons[index - 1]
 
         position = (last.x, last.y)
         destroy(last)
-        self.buttons[index-1] = Button(model='quad',
-                         position=Vec2(*position),
-                         scale=(0.1, 0.08, 0.1),
-                         text='CAM '+str(index),
-                         color=rgb(150, 150, 150),
-                         on_click=self.get_func(index))
+        self.buttons[index - 1] = Button(model='quad',
+                                         position=Vec2(*position),
+                                         scale=(0.1, 0.08, 0.1),
+                                         text='CAM ' + str(index),
+                                         color=rgb(150, 150, 150),
+                                         on_click=self.get_func(index))
 
         self.update_ground()
 
@@ -369,9 +425,11 @@ class CameraMenu(Entity):
         else:
             x = str(self.index)
 
-        self.ground.texture = load_texture('camera/' + f'{x}.png')
+        self.ground.texture = load_texture('assets/camera/' + f'{x}.png')
 
     def open(self):
+        if self.player.energy <= 0.5:
+            return playsound('error.mp3')
         self.state = True
         self.load()
         self.update_ground()
@@ -451,7 +509,7 @@ class StartScene(Entity):
         self.load()
 
     def load(self):
-        background_image = "background.gif"
+        background_image = "assets/images/background.gif"
         self.background = Animation(background_image, parent=camera.ui)
         self.background.scale /= 6
         self.background.position = (0, 0)
@@ -478,7 +536,7 @@ class StartScene(Entity):
 
         self.music = Audio('music/background.mp3')
         self.music.play()
-    
+
     def open_settings(self):
         if self.sett_menu is None:
             if self.menu is not None:
@@ -519,13 +577,13 @@ class StartScene(Entity):
 
 
 def playsound(name):
-    audio = Audio('music/' + name)
+    audio = Audio('assets/music/' + name)
     audio.play()
     return audio
 
 
 def playvideo(name):
-    xx = 'videos/' + name
+    xx = 'assets/videos/' + name
     video_player = Entity(model='quad', parent=camera.ui, scale=(1.5, 1), texture=xx)
     video_sound = loader.loadSfx(xx)
     video_player.texture.synchronizeTo(video_sound)
