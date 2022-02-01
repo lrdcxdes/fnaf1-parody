@@ -185,7 +185,7 @@ class GameScene(Entity):
                     playsound(animatronic + '.mp3')
                     self.animatronics[animatronic][1] = True
                 if self.animatronics[animatronic][1] and self.animatronics[animatronic][0] >= self.animatronics[\
-                        animatronic][5] + 20:
+                        animatronic][5] + 50:
                     if self.state[self.animatronics[animatronic][3]]:
                         self.animatronics[animatronic][0] = 0
                         self.animatronics[animatronic][1] = False
@@ -225,6 +225,15 @@ class CameraMenu(Entity):
         self.buttons = []
 
         self.state = False
+
+        self.bonus = False
+
+        self.clicks = ''
+
+        self.bonus_sec = 0
+
+        self.bonus_dest = False
+        self.bonus_vid = None
 
     def get_func(self, i):
         def a():
@@ -271,6 +280,14 @@ class CameraMenu(Entity):
     def update(self):
         if self.state:
             self.update_ground()
+            if '4131' in self.clicks and self.bonus is False:
+                self.bonus_vid = playvideo('bonus.mp4')
+                self.bonus = True
+            elif self.bonus is True and self.bonus_sec < 6:
+                self.bonus_sec += time.dt
+            elif self.bonus_sec >= 6 and self.bonus_dest is False:
+                destroy(self.bonus_vid)
+                self.bonus_dest = True
 
     def unload(self):
         [destroy(i) for i in self.buttons]
@@ -288,6 +305,8 @@ class CameraMenu(Entity):
                                                          else self.player.cameras.open()])
 
     def change(self, index):
+        if self.bonus is False:
+            self.clicks += str(index)
         try:
             if self.index is not None:
                 old = self.buttons[self.index - 1]
@@ -340,6 +359,8 @@ class CameraMenu(Entity):
             x = str(self.index) + '/'
 
             if self.player.animatronics['foxy'][1]:
+                x += '4'
+            elif self.player.animatronics['foxy'][0] >= self.player.animatronics['foxy'][5]:
                 x += '3'
             elif self.player.animatronics['foxy'][0] >= 60:
                 x += '2'
