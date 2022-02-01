@@ -2,7 +2,7 @@ from ursina import *
 import webbrowser
 from threading import Thread
 
-app = Ursina()
+app = Ursina(development_mode=False)
 
 window.fullscreen = False
 
@@ -63,20 +63,20 @@ class GameScene(Entity):
             self.background.scale /= 6
             self.background.position = (0, 0)
 
-            #self.left_door = Animation('assets/images/open.gif', parent=self.background,
-            #                           position=(-0.5, 0),
-            #                           loop=False,
-            #                           color=rgb(0, 0, 0)
-            #                           )
-            #self.left_door.scale /= 6
+            self.left_door = Animation('assets/images/open.gif', parent=self.background,
+                                       position=(-0.5, 0),
+                                       loop=False,
+                                       color=rgb(0, 0, 0)
+                                       )
+            self.left_door.scale /= 6
 
-            #self.right_door = Animation('assets/images/open.gif', parent=self.background,
-            #                            position=Vec2(0.5, 0),
-             #                           loop=False,
-            #                            color=rgb(0, 0, 0)
-             #                           )  # 123
+            self.right_door = Animation('assets/images/open.gif', parent=self.background,
+                                        position=Vec2(0.5, 0),
+                                        loop=False,
+                                        color=rgb(0, 0, 0)
+                                        )  # 123
 
-            #self.right_door.scale /= 6
+            self.right_door.scale /= 6
 
         self.lol = self.background.scale[2] / 2
 
@@ -119,22 +119,24 @@ class GameScene(Entity):
         return res
 
     def input(self, key):
-        if key == 'left mouse down':
-            if mouse.x <= -0.65:
-                self.edit_door('left')
-            elif mouse.x >= 0.65:
-                self.edit_door('right')
-            elif -0.16 >= round(mouse.x, 2) >= -0.19:
-                playsound('pasx.mp3')
-        if key == 'a':
-            self.edit_door('left')
-        if key == 'd':
-            self.edit_door('right')
         if key == 'space':
             playsound('click.mp3')
             self.cameras.deopen() if self.cameras.state else self.cameras.open()
         elif key == 'escape':
             self.lose()
+
+        if self.cameras.state is False:
+            if key == 'left mouse down':
+                if mouse.x <= -0.65:
+                    self.edit_door('left')
+                elif mouse.x >= 0.65:
+                    self.edit_door('right')
+                elif (-0.16 >= round(mouse.x, 2) >= -0.19) and (0.165 <= round(mouse.y, 2) <= 0.18):
+                    playsound('pasx.mp3')
+            if key == 'a':
+                self.edit_door('left')
+            if key == 'd':
+                self.edit_door('right')
 
     def off_light(self):
         self.energy_state = True
@@ -176,9 +178,9 @@ class GameScene(Entity):
 
         if self.energy > 0 and self.energy_state is False:
             if self.state['left']:
-                self.energy -= time.dt
+                self.energy -= time.dt / 5
             if self.state['right']:
-                self.energy -= time.dt
+                self.energy -= time.dt / 5
             self.energy -= 0.00001
 
         elif self.energy <= 0 and self.energy_state is False:
@@ -212,21 +214,24 @@ class GameScene(Entity):
                           f'left: {"да" if self.state["left"] else "нет"}\n' \
                           f'right: {"да" if self.state["right"] else "нет"}'
 
-        #if self.state[x]:
-            #a = 'close.gif'
-        #else:
-            #a = 'open.gif'
+        if self.state[x]:
+            a = 'close.gif'
+        else:
+            a = 'open.gif'
 
-        #destroy(getattr(self, f'{x}_door'))
+        destroy(getattr(self, f'{x}_door'))
 
-        #obj = Animation(f'assets/images/{a}', parent=self.background,
-        #                position=(-0.5 if x == 'left' else 0.5, 0),
-        #                loop=False,
-        #                fps=60
-        #                )
-        #obj.scale /= 6
+        obj = Animation(f'assets/images/{a}',
+                        parent=self.background,
+                        position=(-0.5 if x == 'left' else 0.5, 0),
+                        loop=False)
+        if self.state[x]:
+            obj.color = color.gray
+        else:
+            obj.color = color.black
+        obj.scale /= 6
 
-        #setattr(self, f'{x}_door', obj)
+        setattr(self, f'{x}_door', obj)
 
     def check_animatronics(self):
         for animatronic in self.animatronics:
@@ -253,6 +258,9 @@ class GameScene(Entity):
         Thread(target=a).start()
 
     def win(self):
+        global max_lvl
+        max_lvl += 1
+        add_level()
         self.winner = True
         playsound('win.mp3')
         anim = Animation('win', loop=False, parent=camera.ui)
@@ -442,11 +450,30 @@ class CameraMenu(Entity):
 class StartMenu(Entity):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.btn_1 = None
+        self.btn_2 = None
+        self.btn_3 = None
+        self.btn_4 = None
+        self.btn_5 = None
+        self.btn_6 = None
         self.load()
+
+        self.last = ''
+
+    def input(self, key):
+        if 'up' in key or 'down' in key: return
+        self.last += key
+        if 'hack' in self.last:
+            global max_lvl
+            max_lvl += 1
+            add_level()
+            self.unload()
+            self.load()
+            self.last = ''
 
     def load(self):
         y = 0.3
-        for i in range(1, 7):
+        for i in range(1, max_lvl+1):
             setattr(self, 'btn_%s' % i, Button('Ночь %s' % i,
                                                position=Vec2(0, y),
                                                scale=(0.4, 0.1, 0.5),
@@ -591,6 +618,16 @@ def playvideo(name):
     return video_player
 
 
+def add_level():
+    open('level', 'w').write(str(max_lvl))
+
+
 if __name__ == '__main__':
+    try:
+        max_lvl = int(open('level', 'r').read())
+    except:
+        max_lvl = 1
+        open('level', 'w').write('1')
+
     scene = StartScene()
     app.run()
