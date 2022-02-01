@@ -456,6 +456,7 @@ class StartMenu(Entity):
         self.btn_4 = None
         self.btn_5 = None
         self.btn_6 = None
+        self.btn_7 = None
         self.load()
 
         self.last = ''
@@ -488,7 +489,7 @@ class StartMenu(Entity):
         return lamb
 
     def unload(self):
-        for i in range(1, 7):
+        for i in range(1, max_lvl+1):
             destroy(getattr(self, 'btn_%s' % i))
 
     def start_game(self, index):
@@ -619,6 +620,8 @@ def playvideo(name):
 
 
 def add_level():
+    if max_lvl >= 7:
+        return
     open('level', 'w').write(str(max_lvl))
 
 
